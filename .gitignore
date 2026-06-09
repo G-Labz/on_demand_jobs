@@ -9,6 +9,9 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Vercel
+.vercel/
+
 # Native
 .kotlin/
 *.orig.*
@@ -31,7 +34,9 @@ yarn-error.*
 *.pem
 
 # local env files
-.env*.local
+.env
+.env.*
+!.env.example
 
 # typescript
 *.tsbuildinfo

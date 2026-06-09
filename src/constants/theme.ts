@@ -1,65 +1,78 @@
 /**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
+ * Design tokens for On Demand Jobs.
+ *
+ * Mobile-first, clean and confident. Two role accents keep the Requester
+ * ("Post Job") and Worker ("Go Online") experiences visually distinct.
  */
+import type { TextStyle } from 'react-native';
 
-import '@/global.css';
+export const colors = {
+  // Brand / default action
+  primary: '#2563EB',
+  primaryDark: '#1D4ED8',
+  primaryMuted: '#DBEAFE',
 
-import { Platform } from 'react-native';
+  // Role accents
+  requester: '#2563EB', // Requester side — Post Job
+  requesterMuted: '#DBEAFE',
+  worker: '#16A34A', // Worker side — Go Online
+  workerMuted: '#DCFCE7',
 
-export const Colors = {
-  light: {
-    text: '#000000',
-    background: '#ffffff',
-    backgroundElement: '#F0F0F3',
-    backgroundSelected: '#E0E1E6',
-    textSecondary: '#60646C',
-  },
-  dark: {
-    text: '#ffffff',
-    background: '#000000',
-    backgroundElement: '#212225',
-    backgroundSelected: '#2E3135',
-    textSecondary: '#B0B4BA',
-  },
+  // Surfaces
+  background: '#FFFFFF',
+  surface: '#F8FAFC',
+  surfaceAlt: '#F1F5F9',
+  border: '#E2E8F0',
+
+  // Text
+  text: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#94A3B8',
+  textInverse: '#FFFFFF',
+
+  // Status
+  success: '#16A34A',
+  successMuted: '#DCFCE7',
+  warning: '#D97706',
+  warningMuted: '#FEF3C7',
+  danger: '#DC2626',
+  dangerMuted: '#FEE2E2',
+  info: '#2563EB',
+  infoMuted: '#DBEAFE',
+
+  // States
+  disabled: '#E2E8F0',
+  disabledText: '#94A3B8',
+  overlay: 'rgba(15, 23, 42, 0.5)',
 } as const;
 
-export type ThemeColor = keyof typeof Colors.light & keyof typeof Colors.dark;
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: 'var(--font-display)',
-    serif: 'var(--font-serif)',
-    rounded: 'var(--font-rounded)',
-    mono: 'var(--font-mono)',
-  },
-});
-
-export const Spacing = {
-  half: 2,
-  one: 4,
-  two: 8,
-  three: 16,
-  four: 24,
-  five: 32,
-  six: 64,
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  xxl: 32,
+  xxxl: 48,
 } as const;
 
-export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
-export const MaxContentWidth = 800;
+export const radius = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  pill: 999,
+} as const;
+
+export const typography = {
+  display: { fontSize: 32, fontWeight: '700', lineHeight: 38 },
+  title: { fontSize: 24, fontWeight: '700', lineHeight: 30 },
+  heading: { fontSize: 18, fontWeight: '600', lineHeight: 24 },
+  body: { fontSize: 16, fontWeight: '400', lineHeight: 22 },
+  bodyStrong: { fontSize: 16, fontWeight: '600', lineHeight: 22 },
+  label: { fontSize: 14, fontWeight: '600', lineHeight: 18 },
+  caption: { fontSize: 13, fontWeight: '500', lineHeight: 18 },
+} satisfies Record<string, TextStyle>;
+
+export const theme = { colors, spacing, radius, typography } as const;
+export type AppTheme = typeof theme;
