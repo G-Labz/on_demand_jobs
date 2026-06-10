@@ -10,13 +10,32 @@ import { formatCents, formatLocalDateTime } from '@/lib/format';
 import { getUserProfile } from '@/services/profileService';
 import { getWorkerProfile, setWorkerOnlineStatus } from '@/services/workerService';
 import { getAvailableJobsForWorker, getWorkerAcceptedJobs } from '@/services/workerJobService';
-import type { CleaningJobTypeSlug } from '@/types/jobs';
+import type { CleaningJobTypeSlug, JobStatus } from '@/types/jobs';
 import type { WorkerProfile } from '@/types/profiles';
 import type { AcceptedWorkerJob, AvailableWorkerJob } from '@/types/worker-jobs';
 
 const JOB_TYPE_LABELS: Record<CleaningJobTypeSlug, string> = {
   str_turnover: 'STR Turnover Cleaning',
   home_cleaning: 'Home Cleaning',
+};
+
+/** Assigned jobs the worker is actively responsible for. */
+const ACTIVE_STATUSES: JobStatus[] = [
+  'accepted',
+  'en_route',
+  'checked_in',
+  'in_progress',
+  'awaiting_approval',
+];
+
+const ACTIVE_STATUS_INFO: Partial<
+  Record<JobStatus, { label: string; nextAction: string }>
+> = {
+  accepted: { label: 'Accepted', nextAction: 'Next: Mark En Route' },
+  en_route: { label: 'En Route', nextAction: 'Next: Check In' },
+  checked_in: { label: 'Checked In', nextAction: 'Next: Start Work' },
+  in_progress: { label: 'In Progress', nextAction: 'Next: Checklist & proof' },
+  awaiting_approval: { label: 'Awaiting Approval', nextAction: 'Waiting on requester' },
 };
 
 export default function WorkerDashboard() {
@@ -41,7 +60,7 @@ export default function WorkerDashboard() {
       ]);
       setDisplayName(profile?.display_name ?? null);
       setWorker(workerProfile);
-      setAcceptedJobs(accepted.filter((j) => j.status === 'accepted'));
+      setAcceptedJobs(accepted.filter((j) => ACTIVE_STATUSES.includes(j.status)));
 
       if (workerProfile?.is_online) {
         setAvailableJobs(await getAvailableJobsForWorker());
@@ -173,28 +192,40 @@ export default function WorkerDashboard() {
 
       {acceptedJobs.length > 0 ? (
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Accepted Job{acceptedJobs.length > 1 ? 's' : ''}</Text>
-          {acceptedJobs.map((job) => (
-            <Pressable
-              key={job.id}
-              accessibilityRole="button"
-              style={[styles.jobCard, styles.acceptedCard]}
-              onPress={() =>
-                router.push({ pathname: '/(worker)/jobs/[id]', params: { id: job.id } })
-              }
-            >
-              <View style={styles.jobCardHeader}>
-                <Text style={styles.jobTitle}>{job.title}</Text>
-                <StatusBadge label="Accepted" tone="success" />
-              </View>
-              <Text style={styles.jobMeta}>
-                {JOB_TYPE_LABELS[job.job_type_slug]} ·{' '}
-                {job.job_type_slug === 'home_cleaning' ? 'Needed by' : 'Guest-ready by'}{' '}
-                {formatLocalDateTime(job.deadline_at)}
-              </Text>
-              <Text style={styles.jobPayout}>{formatCents(job.payout_cents)}</Text>
-            </Pressable>
-          ))}
+          <Text style={styles.sectionTitle}>Active Job{acceptedJobs.length > 1 ? 's' : ''}</Text>
+          {acceptedJobs.map((job) => {
+            const info = ACTIVE_STATUS_INFO[job.status] ?? {
+              label: job.status.replaceAll('_', ' '),
+              nextAction: 'Open the job workspace',
+            };
+            return (
+              <Pressable
+                key={job.id}
+                accessibilityRole="button"
+                style={[styles.jobCard, styles.acceptedCard]}
+                onPress={() =>
+                  router.push({ pathname: '/(worker)/jobs/[id]/work', params: { id: job.id } })
+                }
+              >
+                <View style={styles.jobCardHeader}>
+                  <Text style={styles.jobTitle}>{job.title}</Text>
+                  <StatusBadge
+                    label={info.label}
+                    tone={job.status === 'awaiting_approval' ? 'warning' : 'success'}
+                  />
+                </View>
+                <Text style={styles.jobMeta}>
+                  {JOB_TYPE_LABELS[job.job_type_slug]} ·{' '}
+                  {job.job_type_slug === 'home_cleaning' ? 'Needed by' : 'Guest-ready by'}{' '}
+                  {formatLocalDateTime(job.deadline_at)}
+                </Text>
+                <View style={styles.jobCardFooter}>
+                  <Text style={styles.jobPayout}>{formatCents(job.payout_cents)}</Text>
+                  <Text style={styles.nextAction}>{info.nextAction} ›</Text>
+                </View>
+              </Pressable>
+            );
+          })}
         </View>
       ) : null}
 
@@ -339,4 +370,11 @@ const styles = StyleSheet.create({
   jobTitle: { ...typography.bodyStrong, color: colors.text, flex: 1 },
   jobMeta: { ...typography.caption, color: colors.textSecondary },
   jobPayout: { ...typography.heading, color: colors.text },
+  jobCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  nextAction: { ...typography.label, color: colors.worker },
 });

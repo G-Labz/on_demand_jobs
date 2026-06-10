@@ -73,6 +73,14 @@ export interface Job {
   /** Set by accept_job when a worker claims the job (Sprint 3). */
   assigned_worker_user_id: string | null;
   accepted_at: string | null;
+  /** Execution + approval timestamps, set by the Sprint 4 transition RPCs. */
+  en_route_at: string | null;
+  checked_in_at: string | null;
+  started_at: string | null;
+  proof_submitted_at: string | null;
+  approved_at: string | null;
+  completed_at: string | null;
+  approved_by_requester_user_id: string | null;
   created_at: string;
   updated_at: string;
 }

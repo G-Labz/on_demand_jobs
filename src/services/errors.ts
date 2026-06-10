@@ -52,6 +52,17 @@ const RPC_ERROR_MESSAGES: Record<string, string> = {
   INVALID_JOB_TYPE: 'This job type is not available.',
   JOB_ALREADY_TAKEN: 'Another worker already accepted this job.',
   PROTECTED_FIELD: 'That field cannot be changed from the app.',
+  WORKER_HAS_ACTIVE_JOB: 'Finish your current job before accepting another.',
+  NOT_ASSIGNED_WORKER: 'This job is assigned to another worker.',
+  INVALID_STATUS: 'That action is not available in this job’s current status.',
+  CHECKLIST_EMPTY: 'The checklist has not been generated yet. Open the job workspace first.',
+  CHECKLIST_INCOMPLETE: 'Complete every checklist task before submitting proof.',
+  PROOF_PHOTO_MISSING: 'Add a proof photo to every task that requires one.',
+  ITEM_NOT_FOUND: 'That checklist task was not found for this job.',
+  ITEM_ALREADY_COMPLETED: 'That checklist task is already completed.',
+  INVALID_STORAGE_PATH: 'The photo could not be linked to this job.',
+  NOT_JOB_OWNER: 'You can only approve jobs you posted.',
+  NOT_A_REQUESTER: 'Only requester accounts can approve completion.',
 };
 
 /**

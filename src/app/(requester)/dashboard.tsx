@@ -17,7 +17,15 @@ const STATUS_BADGES: Partial<Record<JobStatus, { label: string; tone: 'neutral' 
   draft: { label: 'Draft', tone: 'neutral' },
   posted: { label: 'Posted', tone: 'info' },
   accepted: { label: 'Accepted', tone: 'success' },
+  en_route: { label: 'En Route', tone: 'info' },
+  checked_in: { label: 'Checked In', tone: 'info' },
+  in_progress: { label: 'In Progress', tone: 'info' },
+  awaiting_approval: { label: 'Awaiting Approval', tone: 'warning' },
+  completed: { label: 'Completed', tone: 'success' },
 };
+
+/** Statuses whose card opens the proof review screen. */
+const REVIEWABLE_STATUSES: JobStatus[] = ['awaiting_approval', 'completed'];
 
 export default function RequesterDashboard() {
   const router = useRouter();
@@ -154,16 +162,39 @@ export default function RequesterDashboard() {
               label: job.status.replaceAll('_', ' '),
               tone: 'neutral' as const,
             };
-            return (
-              <View key={job.id} style={styles.recentCard}>
+            const reviewable = REVIEWABLE_STATUSES.includes(job.status);
+            const card = (
+              <>
                 <View style={styles.recentCardBody}>
                   <Text style={styles.recentTitle}>{job.title}</Text>
                   <Text style={styles.recentMeta}>
                     {job.job_type_slug === 'home_cleaning' ? 'Needed by' : 'Guest-ready by'}{' '}
                     {formatLocalDateTime(job.deadline_at)}
                   </Text>
+                  {job.status === 'awaiting_approval' ? (
+                    <Text style={styles.reviewAction}>Review Proof ›</Text>
+                  ) : null}
                 </View>
                 <StatusBadge label={badge.label} tone={badge.tone} />
+              </>
+            );
+            return reviewable ? (
+              <Pressable
+                key={job.id}
+                accessibilityRole="button"
+                style={styles.recentCard}
+                onPress={() =>
+                  router.push({
+                    pathname: '/(requester)/jobs/[id]/review',
+                    params: { id: job.id },
+                  })
+                }
+              >
+                {card}
+              </Pressable>
+            ) : (
+              <View key={job.id} style={styles.recentCard}>
+                {card}
               </View>
             );
           })}
@@ -247,4 +278,5 @@ const styles = StyleSheet.create({
   recentCardBody: { flex: 1, gap: spacing.xs },
   recentTitle: { ...typography.bodyStrong, color: colors.text },
   recentMeta: { ...typography.caption, color: colors.textSecondary },
+  reviewAction: { ...typography.label, color: colors.requester },
 });

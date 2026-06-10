@@ -18,9 +18,13 @@ This repo currently contains:
 - **Sprint 3** — the Worker live job loop: real Go Online state, an Available Jobs feed of
   posted Cleaning jobs (safe preview fields only), job detail, and race-safe acceptance via
   a Supabase RPC. Requesters see jobs flip to **Accepted**.
+- **Sprint 4** — the execution + proof + approval loop: worker job workspace with strict
+  status progression (En Route → Check In → Start Work), per-job checklist generated from
+  templates, private proof-photo uploads to Supabase Storage, Submit Proof, and the
+  requester Review Proof + Approve Completion flow ending in **Completed**.
 
-Payments, GPS check-in, photo proof, messaging, and the completion flow are built in later
-sprints.
+Payments, GPS verification, messaging, and disputes are built in later sprints. (Check In
+is a worker action button — no location tracking.)
 
 ## Tech stack
 
@@ -59,6 +63,7 @@ Apply the migrations to your Supabase project (SQL Editor or CLI) in order:
 supabase/migrations/001_sprint_1_foundation.sql
 supabase/migrations/002_sprint_2_requester_worker_cleaning_jobs.sql
 supabase/migrations/003_sprint_3_worker_feed_acceptance.sql
+supabase/migrations/004_sprint_4_job_execution_proof_approval.sql
 ```
 
 - **001** creates `user_profiles` + the role profile tables with triggers, indexes, RLS.
@@ -70,8 +75,23 @@ supabase/migrations/003_sprint_3_worker_feed_acceptance.sql
   job detail / atomic `accept_job` / `set_worker_online_status` RPCs, assigned-worker RLS,
   and hardens `worker_profiles` so workers cannot self-change `verification_status` or
   `worker_tier` from the app.
+- **004** adds execution timestamps, `job_checklist_items` / `job_proof_photos` /
+  `job_status_events` (SELECT-only RLS; all writes via RPC), the **private
+  `job-proof-photos` storage bucket + policies**, the status-transition RPCs
+  (`ensure_job_checklist`, `set_job_en_route`, `check_in_job`, `start_job_work`,
+  `complete_checklist_item`, `add_job_proof_photo`, `submit_job_proof`,
+  `approve_job_completion`), and re-creates `accept_job` with a one-active-job limit.
 
 All migrations are idempotent — safe to re-run.
+
+> **Storage policy note:** migration 004 creates the private bucket and its policies via
+> SQL (`insert into storage.buckets …` + `create policy … on storage.objects`). If your
+> hosted project rejects the `storage.objects` policy statements due to permissions, create
+> the same two policies in **Dashboard → Storage → job-proof-photos → Policies** using the
+> exact `with check` / `using` expressions from the migration file (upload: assigned worker
+> + job `in_progress`, keyed on the first path segment = job id; read: assigned worker or
+> owning requester). The bucket must remain **private** — proof photos are only ever viewed
+> through short-lived signed URLs.
 
 ### Worker testing setup (Sprint 3)
 
@@ -113,8 +133,10 @@ src/
     index.tsx              # boot / loading / retry screen
     (auth)/                # welcome, login, signup
     (onboarding)/          # role-selection, requester/worker profile setup
-    (requester)/           # dashboard (+ Recent Jobs), locations (list/new/[id]), jobs (new/review)
-    (worker)/              # dashboard (Go Online + Available Jobs), jobs/[id] (detail + accept)
+    (requester)/           # dashboard (+ Recent Jobs), locations, jobs (new/review),
+                           # jobs/[id]/review (proof review + approve)
+    (worker)/              # dashboard, jobs/[id]/ (detail + accept), jobs/[id]/work
+                           # (execution workspace: status, checklist, proof, submit)
   components/              # AppButton, AppInput, ScreenContainer, RoleCard, StatusBadge,
                            # OptionGroup, ToggleRow, DateTimeField
   constants/theme.ts       # colors, spacing, radius, typography
@@ -122,10 +144,11 @@ src/
   hooks/useAuth.ts
   lib/supabase.ts          # Supabase client (env-driven, web/native/server-safe)
   lib/format.ts            # currency + datetime display helpers
+  lib/storage.ts           # private proof-photo upload + signed URL helpers
   services/                # errors, profileService, locationService, jobService,
-                           # workerService, workerJobService
-  types/                   # profiles, locations, jobs, worker-jobs
-supabase/migrations/       # 001_…sql, 002_…sql, 003_…sql
+                           # workerService, workerJobService, requesterReviewService
+  types/                   # profiles, locations, jobs, worker-jobs, job-execution
+supabase/migrations/       # 001_…sql, 002_…sql, 003_…sql, 004_…sql
 ```
 
 ## Available scripts
@@ -208,8 +231,7 @@ OAuth flows to work on the deployed site.
    them (env vars are baked into the build).
 5. The Production Deployment appears in Vercel after a successful build.
 
-## Next: Sprint 4
+## Next: Sprint 5
 
-Job execution flow: worker en-route/check-in states, room-by-room checklist completion with
-photo proof upload, and requester review/approval — building on the checklist templates and
-the job status lifecycle already in the schema.
+Payments: payout authorization at posting, escrow-style hold, release on approval (Stripe
+Connect), plus an auto-release timer for unreviewed proof.
