@@ -14,14 +14,14 @@ export default function Welcome() {
         <View style={styles.hero}>
           <View style={styles.pulse}>
             <View style={styles.pulseDot} />
-            <Text style={styles.kicker}>LIVE TURNOVER DISPATCH · NE OHIO</Text>
+            <Text style={styles.kicker}>LIVE JOB DISPATCH · NE OHIO</Text>
           </View>
 
-          <Text style={styles.headline}>Turnovers handled in real time.</Text>
+          <Text style={styles.headline}>Cleaning jobs handled in real time.</Text>
 
           <Text style={styles.subtext}>
-            Hosts post STR turnover gigs. Cleaners go online, accept nearby jobs, complete
-            proof-based checklists, and get paid.
+            Requesters post cleaning jobs — STR turnovers and home cleanings. Workers go
+            online, accept nearby jobs, complete proof-based checklists, and get paid.
           </Text>
         </View>
 

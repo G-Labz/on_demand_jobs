@@ -52,7 +52,7 @@ export default function Login() {
     <ScreenContainer>
       <View style={styles.header}>
         <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Log in to dispatch or pick up turnovers.</Text>
+        <Text style={styles.subtitle}>Log in to post jobs or pick up work.</Text>
       </View>
 
       <View style={styles.form}>

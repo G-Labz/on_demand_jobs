@@ -70,6 +70,9 @@ export interface Job {
   /** Home Cleaning rooms/areas/scope; null for STR Turnover. */
   cleaning_scope: string | null;
   special_instructions: string | null;
+  /** Set by accept_job when a worker claims the job (Sprint 3). */
+  assigned_worker_user_id: string | null;
+  accepted_at: string | null;
   created_at: string;
   updated_at: string;
 }

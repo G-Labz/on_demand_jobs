@@ -71,7 +71,7 @@ export default function SignUp() {
       <View style={styles.header}>
         <Text style={styles.title}>Create your account</Text>
         <Text style={styles.subtitle}>
-          One account works whether you post turnovers or clean them.
+          One account works whether you post jobs or work them.
         </Text>
       </View>
 

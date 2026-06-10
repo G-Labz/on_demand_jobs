@@ -15,8 +15,12 @@ This repo currently contains:
 - **Sprint 1** — foundation: auth, role selection, profile setup, role dashboards.
 - **Sprint 2** — Requester/Worker architecture + the Requester-side Cleaning job posting
   foundation (service locations, cleaning jobs, checklist templates), saved in Supabase.
+- **Sprint 3** — the Worker live job loop: real Go Online state, an Available Jobs feed of
+  posted Cleaning jobs (safe preview fields only), job detail, and race-safe acceptance via
+  a Supabase RPC. Requesters see jobs flip to **Accepted**.
 
-Worker gig feed, accepting, payments, GPS, and photo proof are built in later sprints.
+Payments, GPS check-in, photo proof, messaging, and the completion flow are built in later
+sprints.
 
 ## Tech stack
 
@@ -49,11 +53,12 @@ git-ignored; only `.env.example` is committed.)
 
 ## Apply the database migrations (required)
 
-Apply both migrations to your Supabase project (SQL Editor or CLI) before testing:
+Apply the migrations to your Supabase project (SQL Editor or CLI) in order:
 
 ```
 supabase/migrations/001_sprint_1_foundation.sql
 supabase/migrations/002_sprint_2_requester_worker_cleaning_jobs.sql
+supabase/migrations/003_sprint_3_worker_feed_acceptance.sql
 ```
 
 - **001** creates `user_profiles` + the role profile tables with triggers, indexes, RLS.
@@ -61,9 +66,34 @@ supabase/migrations/002_sprint_2_requester_worker_cleaning_jobs.sql
   cleaner→worker — data-preserving and idempotent) and adds the Cleaning schema:
   `service_locations`, `service_categories`, `job_types`, `jobs`,
   `cleaning_checklist_templates` (with seeds, triggers, indexes, owner-scoped RLS).
+- **003** adds job assignment (`assigned_worker_user_id`, `accepted_at`), the worker feed /
+  job detail / atomic `accept_job` / `set_worker_online_status` RPCs, assigned-worker RLS,
+  and hardens `worker_profiles` so workers cannot self-change `verification_status` or
+  `worker_tier` from the app.
 
-On a fresh project, run 001 then 002. On a Sprint 1 database, run 002 — it migrates
-existing `host`/`cleaner` data to `requester`/`worker` in place. 002 is safe to re-run.
+All migrations are idempotent — safe to re-run.
+
+### Worker testing setup (Sprint 3)
+
+New workers start as `verification_status='pending'`, `worker_tier='L1'` and cannot accept
+jobs (current Cleaning job types require **L2**). To promote a test worker, run in the
+Supabase **SQL Editor**:
+
+```sql
+update public.worker_profiles
+   set verification_status = 'verified', worker_tier = 'L2'
+ where user_id = '<auth user uuid>';
+```
+
+(The allowed values are `pending` / `verified` / `rejected` — `approved` is not a legal
+value. The SQL editor works because the protected-fields trigger only restricts
+authenticated app sessions; admin SQL runs without a user JWT.)
+
+**Sprint 3 matching rule (temporary):** a worker sees posted Cleaning jobs whose service
+location ZIP shares its **first 3 digits** with the worker's `home_base_zip` (Northeast Ohio
+prefixes 440–445). This is ZIP-area matching for testing — not GPS/distance matching, which
+arrives in a later sprint. Make sure your test job's location ZIP and the worker's home base
+ZIP share a prefix (e.g. 44303 and 44313).
 
 ## Auth & email confirmation
 
@@ -83,8 +113,8 @@ src/
     index.tsx              # boot / loading / retry screen
     (auth)/                # welcome, login, signup
     (onboarding)/          # role-selection, requester/worker profile setup
-    (requester)/           # dashboard, locations (list/new/[id]), jobs (new/review)
-    (worker)/dashboard.tsx # Worker dashboard — centers "Go Online" (disabled until Sprint 3)
+    (requester)/           # dashboard (+ Recent Jobs), locations (list/new/[id]), jobs (new/review)
+    (worker)/              # dashboard (Go Online + Available Jobs), jobs/[id] (detail + accept)
   components/              # AppButton, AppInput, ScreenContainer, RoleCard, StatusBadge,
                            # OptionGroup, ToggleRow, DateTimeField
   constants/theme.ts       # colors, spacing, radius, typography
@@ -92,9 +122,10 @@ src/
   hooks/useAuth.ts
   lib/supabase.ts          # Supabase client (env-driven, web/native/server-safe)
   lib/format.ts            # currency + datetime display helpers
-  services/                # errors, profileService, locationService, jobService
-  types/                   # profiles, locations, jobs
-supabase/migrations/       # 001_…sql, 002_…sql
+  services/                # errors, profileService, locationService, jobService,
+                           # workerService, workerJobService
+  types/                   # profiles, locations, jobs, worker-jobs
+supabase/migrations/       # 001_…sql, 002_…sql, 003_…sql
 ```
 
 ## Available scripts
@@ -177,7 +208,8 @@ OAuth flows to work on the deployed site.
    them (env vars are baked into the build).
 5. The Production Deployment appears in Vercel after a successful build.
 
-## Next: Sprint 3
+## Next: Sprint 4
 
-Worker-side: add worker RLS read policies on `jobs`, build the nearby gig feed + accept
-flow, and wire real **Go Online** state (`worker_profiles.is_online`).
+Job execution flow: worker en-route/check-in states, room-by-room checklist completion with
+photo proof upload, and requester review/approval — building on the checklist templates and
+the job status lifecycle already in the schema.

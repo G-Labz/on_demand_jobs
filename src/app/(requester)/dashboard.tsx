@@ -4,11 +4,20 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '@/components/AppButton';
 import { ScreenContainer } from '@/components/ScreenContainer';
+import { StatusBadge } from '@/components/StatusBadge';
 import { colors, radius, spacing, typography } from '@/constants/theme';
 import { useAuth } from '@/hooks/useAuth';
-import { getActiveRequesterJobs } from '@/services/jobService';
+import { formatLocalDateTime } from '@/lib/format';
+import { getActiveRequesterJobs, getRequesterJobs } from '@/services/jobService';
 import { getRequesterLocations } from '@/services/locationService';
 import { getUserProfile } from '@/services/profileService';
+import type { Job, JobStatus } from '@/types/jobs';
+
+const STATUS_BADGES: Partial<Record<JobStatus, { label: string; tone: 'neutral' | 'info' | 'success' | 'warning' }>> = {
+  draft: { label: 'Draft', tone: 'neutral' },
+  posted: { label: 'Posted', tone: 'info' },
+  accepted: { label: 'Accepted', tone: 'success' },
+};
 
 export default function RequesterDashboard() {
   const router = useRouter();
@@ -17,20 +26,23 @@ export default function RequesterDashboard() {
   const [displayName, setDisplayName] = useState<string | null>(null);
   const [locationCount, setLocationCount] = useState<number | null>(null);
   const [activeJobCount, setActiveJobCount] = useState<number | null>(null);
+  const [recentJobs, setRecentJobs] = useState<Job[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [signingOut, setSigningOut] = useState(false);
 
   const load = useCallback(async () => {
     if (!user) return;
     try {
-      const [profile, locations, activeJobs] = await Promise.all([
+      const [profile, locations, activeJobs, allJobs] = await Promise.all([
         getUserProfile(user.id),
         getRequesterLocations(user.id),
         getActiveRequesterJobs(user.id),
+        getRequesterJobs(user.id),
       ]);
       setDisplayName(profile?.display_name ?? null);
       setLocationCount(locations.length);
       setActiveJobCount(activeJobs.length);
+      setRecentJobs(allJobs.slice(0, 5));
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load your dashboard.');
@@ -133,6 +145,30 @@ export default function RequesterDashboard() {
           <Text style={styles.linkChevron}>›</Text>
         </Pressable>
       ) : null}
+
+      {recentJobs.length > 0 ? (
+        <View style={styles.recentSection}>
+          <Text style={styles.sectionTitle}>Recent Jobs</Text>
+          {recentJobs.map((job) => {
+            const badge = STATUS_BADGES[job.status] ?? {
+              label: job.status.replaceAll('_', ' '),
+              tone: 'neutral' as const,
+            };
+            return (
+              <View key={job.id} style={styles.recentCard}>
+                <View style={styles.recentCardBody}>
+                  <Text style={styles.recentTitle}>{job.title}</Text>
+                  <Text style={styles.recentMeta}>
+                    {job.job_type_slug === 'home_cleaning' ? 'Needed by' : 'Guest-ready by'}{' '}
+                    {formatLocalDateTime(job.deadline_at)}
+                  </Text>
+                </View>
+                <StatusBadge label={badge.label} tone={badge.tone} />
+              </View>
+            );
+          })}
+        </View>
+      ) : null}
     </ScreenContainer>
   );
 }
@@ -196,4 +232,19 @@ const styles = StyleSheet.create({
   },
   linkText: { ...typography.bodyStrong, color: colors.text },
   linkChevron: { ...typography.title, color: colors.textMuted },
+  recentSection: { gap: spacing.md, marginTop: spacing.xl },
+  sectionTitle: { ...typography.heading, color: colors.text },
+  recentCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+  },
+  recentCardBody: { flex: 1, gap: spacing.xs },
+  recentTitle: { ...typography.bodyStrong, color: colors.text },
+  recentMeta: { ...typography.caption, color: colors.textSecondary },
 });
